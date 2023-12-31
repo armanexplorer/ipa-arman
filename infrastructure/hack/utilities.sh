@@ -75,7 +75,7 @@ spec:
     any: true
 EOF
 
-    kubectl apply -f ~/infrastructure/istio-monitoring.yaml
+    kubectl apply -f ~/ipa/infrastructure/istio-monitoring.yaml
     kubectl patch svc prometheus-k8s -n monitoring --type='json' -p '[{"op":"replace","path":"/spec/type","value":"NodePort"}]'
     kubectl patch svc grafana -n monitoring --type='json' -p '[{"op":"replace","path":"/spec/type","value":"NodePort"}]'
     kubectl patch svc prometheus-k8s -n monitoring --patch '{"spec": {"type": "NodePort", "ports": [{"port": 9090, "nodePort": 30090}]}}'

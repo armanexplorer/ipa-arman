@@ -344,11 +344,13 @@ class BarAzmoonAsyncGrpc:
             await asyncio.gather(*tasks)
 
     async def submit_requests_after(self, after, req_count, duration):
+        # after = the relative time to the start of the benchmarking
         if after:
             await asyncio.sleep(after)
-        tasks = []
+        
+        # rate of requests in this step of benchmark
         beta = duration / req_count
-        start = time.time()
+        
 
         rng = default_rng()
         if self.mode == "step":
@@ -357,9 +359,12 @@ class BarAzmoonAsyncGrpc:
             arrival = np.arange(req_count) * beta
         elif self.mode == "exponential":
             arrival = rng.exponential(beta, req_count)
-        print(
-            f"Sending {req_count} requests sent in {time.ctime()} at timestep {after}"
-        )
+        
+        tasks = []
+        start = time.time()
+        
+        print(f"Sending {req_count} requests sent in {time.ctime()} at timestep {after}")
+        
         for i in range(req_count):
             if self.request_index == len(self.payloads):
                 self.request_index = 0
@@ -384,18 +389,17 @@ class BarAzmoonAsyncGrpc:
 
         resps = await asyncio.gather(*tasks)
 
+        # wait untill the duration complete (for better logging?!)
         elapsed = time.time() - start
         if elapsed < duration:
             await asyncio.sleep(duration - elapsed)
 
+        # store responses in the object
         self.responses.append(resps)
+        
         total = len(resps)
-        failed = 0
-        for resp in resps:
-            if "failed" in resp.keys():
-                failed += 1
-        success = total - failed
-        print(
-            f"Recieving {total} requests sent in {time.ctime()} at timestep {after}, success rate: {success}/{total}"
-        )
+        success = len([1 for resp in resps if "failed" not in resp.keys()])
+        print(f"Recieving {total} requests sent in \
+              {time.ctime()} at timestep {after}, success rate: {success}/{total}")
+        
         return resps

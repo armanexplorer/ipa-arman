@@ -2,7 +2,7 @@
 function install_gurobi() {
     # TODO make sure environment is activated
     echo "Installing Gurobi"
-    pip install gurobipy==10.0.1
+    # pip install gurobipy==10.0.1
 
     # Step 1: Download Gurobi Optimizer
     # download_url="https://packages.gurobi.com/10.0/gurobi10.0.2_linux64.tar.gz"

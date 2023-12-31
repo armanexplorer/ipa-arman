@@ -31,9 +31,9 @@ function install_helm() {
 function install_microk8s() {
     echo "Installing MicroK8s"
     sudo snap install microk8s --classic --channel=1.23/edge
-    sudo usermod -a -G microk8s cc
+    sudo usermod -a -G microk8s $USER
     mkdir -p $HOME/.kube
-    sudo chown -f -R cc ~/.kube
+    sudo chown -f -R $USER ~/.kube
     microk8s config > $HOME/.kube/config
     sudo ufw allow in on cni0
     sudo ufw allow out on cni0
