@@ -248,14 +248,28 @@ class BarAzmoonAsyncRest:
 async def request_after_grpc(stub, metadata, wait, payload):
     if wait:
         await asyncio.sleep(wait)
+        
+    # clock
     sending_time = time.time()
+    
+    # initiate response
+    times = {}
+    resp = {'times': times}
+    
     try:
-        # extract the infromation based on datatype
+        # grpc call
         grpc_resp = await stub.ModelInfer(request=payload, metadata=metadata)
+        
+        # clock
         arrival_time = time.time()
+        
+        # convert grpc response to readable one
         inference_response = converters.ModelInferResponseConverter.to_types(grpc_resp)
+        
+        # type of inference
         type_of = inference_response.parameters.type_of
-        # type_of = 'image'
+        
+        # extract output based on datatype
         if type_of == "image":
             for request_output in inference_response.outputs:
                 dtypes = request_output.parameters.dtype
@@ -273,33 +287,28 @@ async def request_after_grpc(stub, metadata, wait, payload):
             outputs = {"data": numpy_output}
 
         # extract timestamps
-        times = {}
         times["request"] = {"sending": sending_time, "arrival": arrival_time}
-        resp = {}
-        resp["times"] = times
         resp["model_name"] = grpc_resp.model_name
-        if hasattr(inference_response.outputs[0].parameters, 'times'): # handling drops
-            times["models"] = eval(eval(inference_response.outputs[0].parameters.times)[0])
+        
+         # handling drops
+        inf_times = getattr(inference_response.outputs[0].parameters, 'times', None)
+        if inf_times:
+            times["models"] = eval(eval(inf_times)[0])
             resp["outputs"] = [outputs]
         else:
             drop_message = NumpyRequestCodec.decode_response(inference_response)[0]
-            resp = {"failed": drop_message}
-        return resp
+            resp = {"failed": drop_message}        
     except asyncio.exceptions.TimeoutError:
-        resp = {"failed": "timeout"}
-        times = {}
+        resp["failed"] = "timeout"
         times["request"] = {"sending": sending_time, "arrival": arrival_time}
-        resp["times"] = times
-        return resp
     except grpc.RpcError as e:
-        resp = {"failed": str(e)}
-        times = {}
+        resp["failed"] = str(e)
         try:
             times["request"] = {"sending": sending_time, "arrival": arrival_time}
         except UnboundLocalError:
             times["request"] = {"sending": sending_time}
-        resp["times"] = times
-        return resp
+    
+    return resp
 
 
 class BarAzmoonAsyncGrpc:
@@ -333,6 +342,9 @@ class BarAzmoonAsyncGrpc:
         async with grpc.aio.insecure_channel(self.endpoint) as ch:
             self.stub = dataplane.GRPCInferenceServiceStub(ch)
             tasks = []
+            
+            # create multiple async benchmarks according to the number of 
+            # workload elements
             for i, req_count in enumerate(request_counts):
                 tasks.append(
                     asyncio.ensure_future(
@@ -344,62 +356,79 @@ class BarAzmoonAsyncGrpc:
             await asyncio.gather(*tasks)
 
     async def submit_requests_after(self, after, req_count, duration):
-        # after = the relative time to the start of the benchmarking
+        """
+        send current benchmark requests according to the mode of distribution.
+        starts to send requests after `after` seconds.
+        """
+        
         if after:
             await asyncio.sleep(after)
         
-        # rate of requests in this step of benchmark
+        # time between each request
         beta = duration / req_count
         
-
-        rng = default_rng()
+        # determine the distbirbution of requests arrival times in current benchmark
         if self.mode == "step":
             arrival = np.zeros(req_count)
         elif self.mode == "equal":
             arrival = np.arange(req_count) * beta
         elif self.mode == "exponential":
-            arrival = rng.exponential(beta, req_count)
+            rng = default_rng()
+            arrival = rng.exponential(beta, req_count)  # beta is average time between reqs 
+        else:
+            raise Exception("You should set mode to `step`, `equal`, or `exponential`")
         
         tasks = []
         start = time.time()
         
-        print(f"Sending {req_count} requests sent in {time.ctime()} at timestep {after}")
+        print(f"Start to send {req_count} requests in {time.ctime()} at timestep {after}")
         
+        # send each request according to the arrivals distribution in the benchmark
+        # duration (1 sec)
+        data_len = len(self.payloads)
         for i in range(req_count):
-            if self.request_index == len(self.payloads):
-                self.request_index = 0
+            data_index = self.request_index % data_len
+                            
+            # break if the stop flag has been set
             if self.stop_flag:
                 break
+            
+            # create async requests
             tasks.append(
                 asyncio.ensure_future(
                     request_after_grpc(
                         self.stub,
                         self.metadata,
                         wait=arrival[i],
-                        payload=self.payloads[self.request_index],
+                        payload=self.payloads[data_index],
                     )
                 )
             )
             self.request_index += 1
+            
         # if self.stop_flag:
         #     # Cancel all remaining tasks if the stop flag is set
         #     for task in tasks:
         #         task.cancel()
         #     return []
 
+        # wait untill all requests in this benchmark resolve, in the order they sent
         resps = await asyncio.gather(*tasks)
 
-        # wait untill the duration complete (for better logging?!)
+        # wait until the duration complete (maybe only for better logging?!)
         elapsed = time.time() - start
         if elapsed < duration:
             await asyncio.sleep(duration - elapsed)
 
-        # store responses in the object
+        # store responses in current object to be accessible for other methods
         self.responses.append(resps)
         
+        # report success rate of this benchmark
         total = len(resps)
         success = len([1 for resp in resps if "failed" not in resp.keys()])
-        print(f"Recieving {total} requests sent in \
-              {time.ctime()} at timestep {after}, success rate: {success}/{total}")
+        
+        print(f"Finished receiving {total} requests in \
+              {time.ctime()} at timestep {after}")
+        print(f"success rate: {success}/{total}")
         
         return resps

@@ -246,21 +246,6 @@ class MLServerAsyncGrpc:
     def get_request_data(self) -> Tuple[str, str]:
         payloads = []
         for data_ins in self.data:
-            # if self.data_type == 'audio':
-            #     payload = types.InferenceRequest(
-            #         inputs=[
-            #             types.RequestInput(
-            #                 name="audio",
-            #                 shape=data_ins.data_shape,
-            #                 datatype="FP32",
-            #                 data=self.data,
-            #                 parameters=types.Parameters(
-            #                     content_type="np",
-            #                     custom_parameters=data_ins.parameters
-            #                     ),
-            #                 )
-            #             ]
-            #         )
             if self.data_type == "text":
                 payload = types.InferenceRequest(
                     inputs=[
@@ -275,20 +260,7 @@ class MLServerAsyncGrpc:
                         )
                     ]
                 )
-            # elif self.data_type == 'image':
-            #     payload =  types.InferenceRequest(
-            #         inputs=[
-            #             types.RequestInput(
-            #             name="image",
-            #             shape=data_ins.data_shape,
-            #             datatype="INT32",
-            #             data=data_ins.data,
-            #             parameters=types.Parameters(
-            #                 content_type="np",
-            #                 **data_ins.custom_parameters),
-            #             )
-            #         ]
-            #     )
+
             elif self.data_type == "image":
                 payload = types.InferenceRequest(
                     inputs=[
@@ -328,3 +300,34 @@ class MLServerAsyncGrpc:
             )
             payloads.append(payload)
         return payloads
+
+
+            # if self.data_type == 'audio':
+            #     payload = types.InferenceRequest(
+            #         inputs=[
+            #             types.RequestInput(
+            #                 name="audio",
+            #                 shape=data_ins.data_shape,
+            #                 datatype="FP32",
+            #                 data=self.data,
+            #                 parameters=types.Parameters(
+            #                     content_type="np",
+            #                     custom_parameters=data_ins.parameters
+            #                     ),
+            #                 )
+            #             ]
+            #         )
+            # elif self.data_type == 'image':
+            #     payload =  types.InferenceRequest(
+            #         inputs=[
+            #             types.RequestInput(
+            #             name="image",
+            #             shape=data_ins.data_shape,
+            #             datatype="INT32",
+            #             data=data_ins.data,
+            #             parameters=types.Parameters(
+            #                 content_type="np",
+            #                 **data_ins.custom_parameters),
+            #             )
+            #         ]
+            #     )
