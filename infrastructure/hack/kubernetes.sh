@@ -40,6 +40,7 @@ function install_microk8s() {
     sudo ufw default allow routed
     sudo microk8s enable dns
     echo "alias k='kubectl'" >> ~/.zshrc
+    echo 'alias k='kubectl' >> ~/.zshrc
     echo "MicroK8s installation complete"
     echo
 }
