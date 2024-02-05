@@ -55,6 +55,8 @@ EOF
 
 function configure_monitoring() {
     echo "Configure monitoring"
+
+    # enable operator in microk8s
     sudo microk8s enable prometheus
 
     cat <<EOF | kubectl apply -f -

@@ -4,7 +4,8 @@ PRIVATEIP=$(hostname -I | cut -d' ' -f1)
 
 
 function setup_storage() {
-    PUBLIC_IP="$1"
+    
+    PUBLIC_IP="$1" && [ ! "$PUBLIC_IP" ] && PUBLIC_IP=$(curl -s ipinfo.io | jq -r '.ip')
 
     echo "Setup storage: Install NFS"
     sudo apt install -y nfs-kernel-server
@@ -91,7 +92,7 @@ stringData:
   RCLONE_CONFIG_S3_ENV_AUTH: "false"
   RCLONE_CONFIG_S3_ACCESS_KEY_ID: minioadmin
   RCLONE_CONFIG_S3_SECRET_ACCESS_KEY: minioadmin
-  RCLONE_CONFIG_S3_ENDPOINT: http://192.5.87.154:31900
+  RCLONE_CONFIG_S3_ENDPOINT: http://$PUBLIC_IP:31900
 EOF
     rm mc
     echo "End Setup storage"
