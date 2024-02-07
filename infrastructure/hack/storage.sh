@@ -68,6 +68,13 @@ EOF
       --set persistence.storageClass=- \
       --set replicas=1
     
+    # make sure the added pods are up
+    kubectl wait --for=condition=ready pod -l app=minio -n minio-system
+    until kubectl get pods -l app=minio-job -n minio-system --field-selector=status.phase==Succeeded -o \
+    'jsonpath={.items[*].status.phase}' | grep -qE 'Succeeded'; do
+      sleep 5
+    done
+
     kubectl patch svc minio -n minio-system --type='json' -p '[{"op":"replace","path":"/spec/type","value":"LoadBalancer"}]'
     kubectl patch svc minio -n minio-system --patch '{"spec": {"type": "LoadBalancer", "ports": [{"port": 9000, "nodePort": 31900}]}}'
 

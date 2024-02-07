@@ -15,8 +15,17 @@ function install_istio() {
     echo "Install Istio"
     sudo microk8s enable community
     sudo microk8s enable istio
+    
+    # make sure the addon has settled up
+    sudo microk8s status --wait-ready
+    
+    # apply prometheus and kiali yamls
     kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.13/samples/addons/prometheus.yaml
     kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.13/samples/addons/kiali.yaml
+    
+    # make sure the added pods are up
+    kubectl wait --for=condition=Ready --timeout=5m pods --all -n istio-system
+    
     echo "End Install Istio"
     echo
 }
@@ -59,6 +68,9 @@ function configure_monitoring() {
     # enable operator in microk8s
     sudo microk8s enable prometheus
 
+    # make sure the addon has settled up
+    sudo microk8s status --wait-ready
+
     cat <<EOF | kubectl apply -f -
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
@@ -78,12 +90,23 @@ spec:
 EOF
 
     kubectl apply -f ~/ipa/infrastructure/istio-monitoring.yaml
+
+
+    # make sure the added pods are up
+    kubectl wait --for=condition=Ready --timeout=5m pods --all -n monitoring
+
     kubectl patch svc prometheus-k8s -n monitoring --type='json' -p '[{"op":"replace","path":"/spec/type","value":"NodePort"}]'
     kubectl patch svc grafana -n monitoring --type='json' -p '[{"op":"replace","path":"/spec/type","value":"NodePort"}]'
     kubectl patch svc prometheus-k8s -n monitoring --patch '{"spec": {"type": "NodePort", "ports": [{"port": 9090, "nodePort": 30090}]}}'
     kubectl patch svc grafana -n monitoring --patch '{"spec": {"type": "NodePort", "ports": [{"port": 3000, "nodePort": 30300}]}}'
+    
+    # apply kiali and jaeger
     kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.13/samples/addons/kiali.yaml
     kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.13/samples/addons/jaeger.yaml
+
+    # make sure the added pods are up
+    kubectl wait --for=condition=Ready --timeout=5m pods --all -n istio-system
+
     echo "End Configure monitoring"
     echo
 }
