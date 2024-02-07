@@ -26,7 +26,13 @@ function install_helm() {
 # Install MicroK8s
 function install_microk8s() {
     echo "Installing MicroK8s"
+
     sudo snap install microk8s --classic --channel=1.23/edge
+    microk8s.status --wait-ready
+
+    # ensure snap has not skipped the errors
+    set -e
+
     sudo usermod -a -G microk8s $USER
     mkdir -p $HOME/.kube
     sudo chown -f -R $USER ~/.kube
@@ -41,11 +47,45 @@ function install_microk8s() {
     echo
 }
 
+function enable_gpu() {
+    sudo microk8s enable gpu
+
+    # verify the gpu is up
+    until kubectl logs -n gpu-operator-resources -lapp=nvidia-operator-validator -c nvidia-operator-validator | grep -q "all validations are successful"; do
+        sleep 5
+    done
+
+    # worklaod test
+    microk8s kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cuda-vector-add
+spec:
+  restartPolicy: OnFailure
+  containers:
+    - name: cuda-vector-add
+      image: "k8s.gcr.io/cuda-vector-add:v0.1"
+      resources:
+        limits:
+          nvidia.com/gpu: 1
+EOF
+
+    # verify the gpu is up
+    until kubectl logs cuda-vector-add | grep -q "Test PASSED"; do
+        sleep 5
+    done
+
+}
+
 # Main script
 echo "Running script"
 
 install_gcloud
 install_helm
 install_microk8s
+
+# if there is gpu on node, enable it
+command -v nvidia-smi && enable_gpu
 
 echo "Script execution complete"

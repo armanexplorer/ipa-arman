@@ -8,11 +8,11 @@ RESET='\e[0m'
 set -e
 
 install_packages() {
-    if [ -z "$1" ];
-    then
-        echo "You must provide public IP: ./build.sh PUBLIC_IP"
-        exit 0; 
-    fi
+    # if [ -z "$1" ];
+    # then
+    #     echo "You must provide public IP: ./build.sh PUBLIC_IP"
+    #     exit 0; 
+    # fi
 
     hack_dir="$HOME/ipa/infrastructure/hack"
     zsh_script="${hack_dir}/zsh.sh"
@@ -25,8 +25,8 @@ install_packages() {
     jupyters="${hack_dir}/jupyters.sh"
 
     # prevent from deattaching from shell
-    sh -c "$zsh_script" "" --unattended
-    echo -e "${INFO}zsh.sh completed!${RESET}"
+    # sh -c "$zsh_script" "" --unattended
+    # echo -e "${INFO}zsh.sh completed!${RESET}"
     
     source "$repos_script"
     echo -e "${INFO}repos.sh completed!${RESET}"

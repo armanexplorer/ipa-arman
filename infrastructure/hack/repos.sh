@@ -13,8 +13,8 @@ function install_packages() {
 # Install and activate Conda environment
 function install_conda_environment() {
     echo "Removing Conda environment"
-    conda deactivate
-    conda env remove --name central
+    command -v conda 1>/dev/null && conda deactivate
+    command -v conda 1>/dev/null && conda env remove --name central
 
     echo "Installing and activating Conda environment"
     wget https://repo.anaconda.com/miniconda/Miniconda3-py39_23.3.1-0-Linux-x86_64.sh -O miniconda-39.sh
@@ -33,7 +33,7 @@ function install_conda_environment() {
 function install_custom_mlserver() {
     echo "Installing the customized MLServer"
     cd ~/ipa/MLServer
-    git checkout configure-custom-1
+    # git checkout configure-custom-1
     make install-dev
     cd ..
     echo "MLServer installation complete"
