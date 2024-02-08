@@ -1,24 +1,23 @@
 #!/bin/bash
 
-PRIVATEIP=$(hostname -I | cut -d' ' -f1)
+set -e
 
+PRIVATEIP=$(hostname -I | cut -d' ' -f1)
+PUBLIC_IP="$1" && [ ! "$PUBLIC_IP" ] && PUBLIC_IP=$(curl -s ipinfo.io | jq -r '.ip')
 
 function setup_storage() {
-    
-    PUBLIC_IP="$1" && [ ! "$PUBLIC_IP" ] && PUBLIC_IP=$(curl -s ipinfo.io | jq -r '.ip')
+  echo "Setup storage: Install NFS"
+  sudo apt install -y nfs-kernel-server
+  sudo mkdir /mnt/myshareddir
+  sudo chown nobody:nogroup /mnt/myshareddir
+  sudo chmod 777 /mnt/myshareddir
+  echo "/mnt/myshareddir $PRIVATEIP/30(rw,sync,no_subtree_check)" | sudo tee -a /etc/exports
+  sudo exportfs -a
+  sudo systemctl restart nfs-kernel-server
+  echo "Setup storage: End Install NFS"
+  echo
 
-    echo "Setup storage: Install NFS"
-    sudo apt install -y nfs-kernel-server
-    sudo mkdir /mnt/myshareddir
-    sudo chown nobody:nogroup /mnt/myshareddir
-    sudo chmod 777 /mnt/myshareddir
-    echo "/mnt/myshareddir $PRIVATEIP/30(rw,sync,no_subtree_check)" | sudo tee -a /etc/exports
-    sudo exportfs -a
-    sudo systemctl restart nfs-kernel-server
-    echo "Setup storage: End Install NFS"
-    echo
-
-    cat <<EOF | kubectl apply -f -
+  cat <<EOF | kubectl apply -f -
 apiVersion: v1
 kind: PersistentVolume
 metadata:
@@ -37,8 +36,8 @@ spec:
     path: "/mnt/myshareddir"
 EOF
 
-    kubectl create ns minio-system
-    cat <<EOF | kubectl apply -f -
+  kubectl create ns minio-system
+  cat <<EOF | kubectl apply -f -
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -53,41 +52,41 @@ spec:
       storage: 100Gi
 EOF
 
-    MINIOUSER=minioadmin
-    MINIOPASSWORD=minioadmin
+  MINIOUSER=minioadmin
+  MINIOPASSWORD=minioadmin
 
-    helm repo add minio https://charts.min.io/
+  helm repo add minio https://charts.min.io/
 
-    helm upgrade --install minio minio/minio \
-      --namespace minio-system \
-      --set rootUser=${MINIOUSER} \
-      --set rootPassword=${MINIOPASSWORD} \
-      --set mode=standalone \
-      --set persistence.enabled=true \
-      --set persistence.existingClaim=pvc-nfs \
-      --set persistence.storageClass=- \
-      --set replicas=1
-    
-    # make sure the added pods are up
-    kubectl wait --for=condition=ready pod -l app=minio -n minio-system
-    until kubectl get pods -l app=minio-job -n minio-system --field-selector=status.phase==Succeeded -o \
-    'jsonpath={.items[*].status.phase}' | grep -qE 'Succeeded'; do
-      sleep 5
-    done
+  helm upgrade --install minio minio/minio \
+    --namespace minio-system \
+    --set rootUser=${MINIOUSER} \
+    --set rootPassword=${MINIOPASSWORD} \
+    --set mode=standalone \
+    --set persistence.enabled=true \
+    --set persistence.existingClaim=pvc-nfs \
+    --set persistence.storageClass=- \
+    --set replicas=1
 
-    kubectl patch svc minio -n minio-system --type='json' -p '[{"op":"replace","path":"/spec/type","value":"LoadBalancer"}]'
-    kubectl patch svc minio -n minio-system --patch '{"spec": {"type": "LoadBalancer", "ports": [{"port": 9000, "nodePort": 31900}]}}'
+  # make sure the added pods are up
+  kubectl wait --for=condition=ready pod -l app=minio -n minio-system
+  # until kubectl get pods -l app=minio-job -n minio-system --field-selector=status.phase==Succeeded -o \
+  #   'jsonpath={.items[*].status.phase}' | grep -qE 'Succeeded'; do
+  #   sleep 5
+  # done
 
-    ACCESS_KEY=$(kubectl get secret minio -n minio-system -o jsonpath="{.data.rootUser}" | base64 --decode)
-    SECRET_KEY=$(kubectl get secret minio -n minio-system -o jsonpath="{.data.rootPassword}" | base64 --decode)
-    
-    wget https://dl.min.io/client/mc/release/linux-amd64/mc
-    chmod +x mc
-    sudo cp mc /usr/local/bin
-    mc alias set minio http://localhost:31900 "$ACCESS_KEY" "$SECRET_KEY" --api s3v4
-    sudo mc ls minio
+  kubectl patch svc minio -n minio-system --type='json' -p '[{"op":"replace","path":"/spec/type","value":"LoadBalancer"}]'
+  kubectl patch svc minio -n minio-system --patch '{"spec": {"type": "LoadBalancer", "ports": [{"port": 9000, "nodePort": 31900}]}}'
 
-    cat <<EOF | kubectl apply -f -
+  ACCESS_KEY=$(kubectl get secret minio -n minio-system -o jsonpath="{.data.rootUser}" | base64 --decode)
+  SECRET_KEY=$(kubectl get secret minio -n minio-system -o jsonpath="{.data.rootPassword}" | base64 --decode)
+
+  wget https://dl.min.io/client/mc/release/linux-amd64/mc
+  chmod +x mc
+  sudo cp mc /usr/local/bin
+  mc alias set minio http://localhost:31900 "$ACCESS_KEY" "$SECRET_KEY" --api s3v4
+  sudo mc ls minio
+
+  cat <<EOF | kubectl apply -f -
 apiVersion: v1
 kind: Secret
 metadata:
@@ -101,13 +100,9 @@ stringData:
   RCLONE_CONFIG_S3_SECRET_ACCESS_KEY: minioadmin
   RCLONE_CONFIG_S3_ENDPOINT: http://$PUBLIC_IP:31900
 EOF
-    rm mc
-    echo "End Setup storage"
-    echo
+  rm mc
+  echo "End Setup storage"
+  echo
 }
 
-
-echo "Running script"
 setup_storage
-
-echo "Script execution complete"

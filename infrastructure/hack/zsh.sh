@@ -17,5 +17,3 @@ customize_zsh() {
     sed -i.bak 's/^PROMPT=.*/PROMPT="%{$fg_bold[green]%}[%*] %(?:%{$fg_bold[green]%}%1{➜%} :%{$fg_bold[red]%}%1{➜%} ) %{$fg[cyan]%}%~%{$reset_color%}"/' $ZSH_CUSTOM/themes/$ZSH_THEME.zsh-theme
     exec zsh
 }
-
-install_zsh

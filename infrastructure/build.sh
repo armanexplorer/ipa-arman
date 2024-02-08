@@ -6,12 +6,13 @@ ERROR='\e[31m'
 RESET='\e[0m'
 
 set -e
+# set -x
 
 install_packages() {
     # if [ -z "$1" ];
     # then
     #     echo "You must provide public IP: ./build.sh PUBLIC_IP"
-    #     exit 0; 
+    #     exit 0;
     # fi
 
     hack_dir="$HOME/ipa/infrastructure/hack"
@@ -24,31 +25,27 @@ install_packages() {
     download_data="${hack_dir}/download_data.sh"
     jupyters="${hack_dir}/jupyters.sh"
 
-    # prevent from deattaching from shell
-    # sh -c "$zsh_script" "" --unattended
-    # echo -e "${INFO}zsh.sh completed!${RESET}"
+    echo -e "${INFO}----------- Installation of all packages and dependencies --------${RESET}"
     
+    echo -e "***** ${INFO}repos.sh${RESET} *****"
     source "$repos_script"
-    echo -e "${INFO}repos.sh completed!${RESET}"
-    
-    bash "$kubernetes_script"
-    echo -e "${INFO}kubernetes.sh completed${RESET}"
-    
-    bash "$utilities_script"
-    echo -e "${INFO}utilities.sh completed${RESET}"
-    
-    bash "$storage_script" "$1"
-    echo -e "${INFO}storage.sh completed${RESET}"
-    
-    # bash "$gurobi_script"
-    # echo "gurobi.sh completed"
-    
-    bash "$download_data"
-    echo -e "${INFO}download_data.sh completed${RESET}"
-    
-    # bash "$jupyters"
-    # echo "jupyters.sh completed"
+    echo -e "***** ${INFO}repos.sh completed!${RESET} *****"
 
+    echo -e "***** ${INFO}kubernetes.sh${RESET} *****"
+    bash "$kubernetes_script"
+    echo -e "***** ${INFO}kubernetes.sh completed!${RESET} *****"
+
+    echo -e "***** ${INFO}utilities.sh${RESET} *****"
+    bash "$utilities_script"
+    echo -e "***** ${INFO}utilities.sh completed!${RESET} *****"
+
+    echo -e "***** ${INFO}storage.sh${RESET} *****"
+    bash "$storage_script" "$1"
+    echo -e "***** ${INFO}storage.sh completed!${RESET} *****"
+
+    echo -e "***** ${INFO}download_data.sh${RESET} *****"
+    bash "$download_data"
+    echo -e "***** ${INFO}download_data.sh completed!${RESET} *****"
 
     echo -e "${INFO}----------- Installation of all packages and dependencies completed! --------${RESET}"
 }

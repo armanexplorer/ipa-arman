@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # Update and install necessary packages
 function install_packages() {
     echo "Updating packages"

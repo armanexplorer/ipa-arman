@@ -1,15 +1,6 @@
 #!/bin/bash
 
-install_kubectl() {
-    echo "Install kubectl"
-    curl -LO https://dl.k8s.io/release/v1.23.2/bin/linux/amd64/kubectl
-    sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-    sudo microk8s config > $HOME/.kube/config
-    sudo ufw allow 16443
-    echo "y" | sudo ufw enable
-    echo "End Install kubectl"
-    rm kubectl
-}
+set -e
 
 function install_istio() {
     echo "Install Istio"
@@ -17,7 +8,7 @@ function install_istio() {
     sudo microk8s enable istio
     
     # make sure the addon has settled up
-    sudo microk8s status --wait-ready
+    sudo microk8s status --wait-ready 1>/dev/null
     
     # apply prometheus and kiali yamls
     kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.13/samples/addons/prometheus.yaml
@@ -69,7 +60,7 @@ function configure_monitoring() {
     sudo microk8s enable prometheus
 
     # make sure the addon has settled up
-    sudo microk8s status --wait-ready
+    sudo microk8s status --wait-ready 1>/dev/null
 
     cat <<EOF | kubectl apply -f -
 apiVersion: monitoring.coreos.com/v1
@@ -113,10 +104,10 @@ EOF
 
 function install_docker() {
     echo "Install Docker"
-    sudo apt-get remove -y docker docker-engine docker.io containerd runc
+    sudo apt-get remove -y docker docker-engine docker.io containerd runc || true
     curl -fsSL https://get.docker.com -o get-docker.sh
     sudo sh get-docker.sh
-    sudo groupadd docker
+    sudo groupadd docker || true
     sudo usermod -aG docker $USER
     sudo systemctl enable docker.service
     sudo systemctl enable containerd.service
@@ -125,7 +116,6 @@ function install_docker() {
     echo
 }
 
-install_kubectl
 install_istio
 install_seldon_core
 configure_monitoring

@@ -1,11 +1,13 @@
 #!/bin/bash
 
+set -e
+
 function download_data(){
     # download experiment logs
-    gsutil -m cp -rn gs://ipa-results-1/results.zip ~/ipa-private/data
-    unzip ~/ipa-private/data/results.zip
-    mv results ~/ipa-private/data
-    rm ~/ipa-private/data/results.zip
+    # gsutil -m cp -rn gs://ipa-results-1/results.zip ~/ipa-private/data
+    # unzip ~/ipa-private/data/results.zip
+    # mv results ~/ipa-private/data
+    # rm ~/ipa-private/data/results.zip
 
     # create buckets
     mc mb minio/huggingface
@@ -25,7 +27,7 @@ function download_data(){
     rm -r ~/temp-model-dir
 
     # download lstm trained model
-    gsutil -m cp -r gs://ipa-models/lstm ~/ipa-private/data
+    # gsutil -m cp -r gs://ipa-models/lstm ~/ipa-private/data
 }
 
 download_data
