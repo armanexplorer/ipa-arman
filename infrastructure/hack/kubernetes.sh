@@ -31,21 +31,22 @@ function install_microk8s() {
 
   sudo snap install microk8s --classic --channel=1.23/edge
 
-  # ensure snap has not skipped the exit on error
-  set -e
-
   sudo usermod -a -G microk8s $USER
   mkdir -p $HOME/.kube
   sudo chown -f -R $USER ~/.kube
-  newgrp microk8s
+  microk8s config >$HOME/.kube/config
+  
+  # prevent warnings of group and world read on kube config file
+  chmod go-r ~/.kube/config
 
   # check microk8s is ready
   microk8s.status --wait-ready
 
-  microk8s config >$HOME/.kube/config
-  sudo ufw allow in on cni0
-  sudo ufw allow out on cni0
-  sudo ufw default allow routed
+  # ufw configs
+  command -v ufw && sudo ufw allow in on cni0
+  command -v ufw && sudo ufw allow out on cni0
+  command -v ufw && sudo ufw default allow routed
+
   sudo microk8s enable dns
   echo "MicroK8s installation complete"
   echo
@@ -55,9 +56,9 @@ install_kubectl() {
   echo "Install kubectl"
   curl -LO https://dl.k8s.io/release/v1.23.2/bin/linux/amd64/kubectl
   sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-  sudo microk8s config >$HOME/.kube/config
-  sudo ufw allow 16443
-  echo "y" | sudo ufw enable
+  # sudo microk8s config >$HOME/.kube/config
+  command -v ufw && sudo ufw allow 16443
+  command -v ufw && (echo "y" | sudo ufw enable)
   echo "alias k='kubectl'" >>~/.zshrc
   rm kubectl
   echo "End Install kubectl"
@@ -67,7 +68,7 @@ function enable_gpu() {
   sudo microk8s enable gpu
 
   # verify the gpu is up
-  echo -e "Check nvidia-operator-validator...\n"
+  echo -e "\nCheck nvidia-operator-validator...\n"
   until kubectl logs -n gpu-operator-resources -lapp=nvidia-operator-validator -c nvidia-operator-validator | grep -q "all validations are successful"; do
     sleep 5
   done
