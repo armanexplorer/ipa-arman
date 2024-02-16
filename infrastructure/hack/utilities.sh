@@ -4,8 +4,8 @@ set -e
 
 function install_istio() {
     echo "Install Istio"
-    sudo microk8s enable community
-    sudo microk8s enable istio
+    sudo microk8s enable community || true
+    sudo microk8s enable istio || true
     
     # make sure the addon has settled up
     sudo microk8s status --wait-ready 1>/dev/null
@@ -57,7 +57,7 @@ function configure_monitoring() {
     echo "Configure monitoring"
 
     # enable operator in microk8s
-    sudo microk8s enable prometheus
+    sudo microk8s enable prometheus || true
 
     # make sure the addon has settled up
     sudo microk8s status --wait-ready 1>/dev/null

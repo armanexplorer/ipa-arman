@@ -34,13 +34,13 @@ function install_microk8s() {
   sudo usermod -a -G microk8s $USER
   mkdir -p $HOME/.kube
   sudo chown -f -R $USER ~/.kube
-  microk8s config >$HOME/.kube/config
+  sudo microk8s config >$HOME/.kube/config
   
   # prevent warnings of group and world read on kube config file
   chmod go-r ~/.kube/config
 
   # check microk8s is ready
-  microk8s.status --wait-ready
+  sudo microk8s.status --wait-ready
 
   # ufw configs
   command -v ufw && sudo ufw allow in on cni0
@@ -52,11 +52,14 @@ function install_microk8s() {
   echo
 }
 
-install_kubectl() {
+function install_kubectl() {
   echo "Install kubectl"
   curl -LO https://dl.k8s.io/release/v1.23.2/bin/linux/amd64/kubectl
   sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-  # sudo microk8s config >$HOME/.kube/config
+
+  # ? update config after installing kubectl
+  sudo microk8s config >$HOME/.kube/config
+  
   command -v ufw && sudo ufw allow 16443
   command -v ufw && (echo "y" | sudo ufw enable)
   echo "alias k='kubectl'" >>~/.zshrc

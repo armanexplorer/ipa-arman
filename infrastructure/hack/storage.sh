@@ -57,7 +57,7 @@ EOF
 
   helm repo add minio https://charts.min.io/
 
-  helm upgrade --install minio minio/minio \
+  helm upgrade --install minio minio/minio --wait \
     --namespace minio-system \
     --set rootUser=${MINIOUSER} \
     --set rootPassword=${MINIOPASSWORD} \
@@ -84,7 +84,7 @@ EOF
   chmod +x mc
   sudo cp mc /usr/local/bin
   mc alias set minio http://localhost:31900 "$ACCESS_KEY" "$SECRET_KEY" --api s3v4
-  sudo mc ls minio
+  mc ls minio
 
   cat <<EOF | kubectl apply -f -
 apiVersion: v1
