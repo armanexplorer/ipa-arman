@@ -67,49 +67,10 @@ function install_kubectl() {
   echo "End Install kubectl"
 }
 
-function enable_gpu() {
-  sudo microk8s enable gpu
-
-  # verify the gpu is up
-  echo -e "\nCheck nvidia-operator-validator...\n"
-  until kubectl logs -n gpu-operator-resources -lapp=nvidia-operator-validator -c nvidia-operator-validator | grep -q "all validations are successful"; do
-    sleep 5
-  done
-  echo -e "Check Passed!\n"
-
-  # worklaod test
-  echo -e "Create test workload on GPU...\n"
-
-  kubectl apply -f - <<EOF
-apiVersion: v1
-kind: Pod
-metadata:
-  name: cuda-vector-add
-spec:
-  restartPolicy: OnFailure
-  containers:
-    - name: cuda-vector-add
-      image: "k8s.gcr.io/cuda-vector-add:v0.1"
-      resources:
-        limits:
-          nvidia.com/gpu: 1
-EOF
-
-  # verify the gpu is up
-  echo -e "Check cuda-vector-add has been completed...\n"
-  until kubectl logs cuda-vector-add | grep -q "Test PASSED"; do
-    sleep 5
-  done
-  echo -e "Check Passed!\n"
-
-  kubectl delete pod/cuda-vector-add
-
-}
-
 install_gcloud
 install_helm
 install_microk8s
 install_kubectl
 
 # if there is gpu on node, enable it
-command -v nvidia-smi && enable_gpu
+# command -v nvidia-smi && enable_gpu
