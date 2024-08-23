@@ -119,7 +119,7 @@ function install_docker() {
   echo
 }
 
-# install_istio
-# install_seldon_core
-# configure_monitoring
+install_istio
+install_seldon_core
+configure_monitoring
 install_docker

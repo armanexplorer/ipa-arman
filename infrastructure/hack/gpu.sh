@@ -73,13 +73,13 @@ EOF
   rm gpu-custom-values.yaml
 
   # disale nvidia plugin in this node
-  kubectl label node arman-gpu nvidia.com/gpu.deploy.driver=false --overwrite
+  kubectl label node $(hostname) nvidia.com/gpu.deploy.driver=false --overwrite
 
   # enable nebuly plugin in this node
-  kubectl label nodes arman-gpu "nos.nebuly.com/gpu-partitioning=mps"
+  kubectl label nodes $(hostname)"nos.nebuly.com/gpu-partitioning=mps"
 
   # ? remove any last history (maybe it should not be removed!)
-  # kubectl label node arman-gpu nvidia.com/device-plugin.config-
+  # kubectl label node $(hostname) nvidia.com/device-plugin.config-
 
   # install nebuly device plugin
   helm install oci://ghcr.io/nebuly-ai/helm-charts/nvidia-device-plugin --wait \
