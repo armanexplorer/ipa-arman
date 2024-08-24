@@ -76,7 +76,7 @@ EOF
   kubectl label node $(hostname) nvidia.com/gpu.deploy.driver=false --overwrite
 
   # enable nebuly plugin in this node
-  kubectl label nodes $(hostname)"nos.nebuly.com/gpu-partitioning=mps"
+  kubectl label nodes $(hostname) "nos.nebuly.com/gpu-partitioning=mps"
 
   # ? remove any last history (maybe it should not be removed!)
   # kubectl label node $(hostname) nvidia.com/device-plugin.config-
