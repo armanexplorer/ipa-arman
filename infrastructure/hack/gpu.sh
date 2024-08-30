@@ -2,6 +2,17 @@
 
 set -e
 
+# Function to handle Ctrl+C (SIGINT) and Ctrl+\ (SIGQUIT)
+handle_signals() {
+  echo "----- Caught error ----"
+  # echo "Cleaning up..."
+  # Perform any necessary cleanup operations here
+  # exit 0
+}
+
+# Trap SIGINT and SIGQUIT signals
+trap handle_signals SIGINT SIGQUIT
+
 function gpu_workload_test() {
   echo -e "Create test workload on GPU...\n"
 
@@ -69,14 +80,13 @@ EOF
 
   # test a simple GPU workload 
   gpu_workload_test
-
   rm gpu-custom-values.yaml
 
-  # disale nvidia plugin in this node
+  # disable nvidia plugin in this node
   kubectl label node $(hostname) nvidia.com/gpu.deploy.driver=false --overwrite
 
-  # enable nebuly plugin in this node
-  kubectl label nodes $(hostname) "nos.nebuly.com/gpu-partitioning=mps"
+  # enable nebuly nvidia plugin in this node
+  kubectl label nodes $(hostname) "nos.nebuly.com/gpu-partitioning=mps" --overwrite
 
   # ? remove any last history (maybe it should not be removed!)
   # kubectl label node $(hostname) nvidia.com/device-plugin.config-

@@ -42,10 +42,16 @@ function install_microk8s() {
   # check microk8s is ready
   sudo microk8s.status --wait-ready
 
-  # ufw configs
+  # firewall configs (TODO: possible deprecation)
   command -v ufw && sudo ufw allow in on cni0
   command -v ufw && sudo ufw allow out on cni0
   command -v ufw && sudo ufw default allow routed
+
+  # only works for Ubuntu20.04
+  sudo iptables -D FORWARD -j REJECT --reject-with icmp-host-prohibited || true
+
+  # might be needed to run this for INPUT chain too
+  # sudo iptables -D INPUT -j REJECT --reject-with icmp-host-prohibited || true
 
   sudo microk8s enable dns
   echo "MicroK8s installation complete"

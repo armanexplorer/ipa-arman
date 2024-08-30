@@ -8,6 +8,7 @@ function install_packages() {
     sudo apt-get update -y
     echo "Installing packages"
     sudo apt-get install ffmpeg libsm6 libxext6 -y
+    sudo apt purge needrestart
     echo "Packages installation complete"
     echo
 }

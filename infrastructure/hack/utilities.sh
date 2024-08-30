@@ -57,10 +57,11 @@ function configure_monitoring() {
   echo "Configure monitoring"
 
   # enable operator in microk8s
-  sudo microk8s enable prometheus
-
-  # make sure the addon has settled up
-  sudo microk8s status --wait-ready 1>/dev/null
+  # TODO: sometimes get the following error
+  # [1] Check the monitoring pods are up...
+  # [2] error: no matching resources found
+  sudo microk8s enable prometheus || true
+  sudo microk8s status --wait-ready 1>/dev/null || true
 
   cat <<EOF | kubectl apply -f -
 apiVersion: monitoring.coreos.com/v1
@@ -106,8 +107,9 @@ EOF
 }
 
 function install_docker() {
-  echo "Install Docker"
+  echo "Try to remove old dockers"
   sudo apt-get remove -y docker docker-engine docker.io containerd runc || true
+  echo "Install Docker"
   curl -fsSL https://get.docker.com -o get-docker.sh
   sudo sh get-docker.sh
   sudo groupadd docker || true

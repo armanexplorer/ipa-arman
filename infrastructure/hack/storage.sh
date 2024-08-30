@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# https://microk8s.io/docs/how-to-nfs
+
 set -e
 
 PRIVATEIP=$(hostname -I | cut -d' ' -f1)
@@ -7,12 +9,17 @@ PUBLIC_IP="$1" && [ ! "$PUBLIC_IP" ] && PUBLIC_IP=$(curl -s ipinfo.io | jq -r '.
 
 function setup_storage() {
   echo "Setup storage: Install NFS"
+  
   sudo apt install -y nfs-kernel-server
+  
   sudo mkdir /mnt/myshareddir
   sudo chown nobody:nogroup /mnt/myshareddir
   sudo chmod 777 /mnt/myshareddir
+  
+  sudo cp /etc/exports /etc/exports.bak
   echo "/mnt/myshareddir $PRIVATEIP/30(rw,sync,no_subtree_check)" | sudo tee -a /etc/exports
   sudo exportfs -a
+  
   sudo systemctl restart nfs-kernel-server
   echo "Setup storage: End Install NFS"
   echo
@@ -105,4 +112,78 @@ EOF
   echo
 }
 
-setup_storage
+function setup_nfs_for_microk8s() {
+  echo "Setup NFS for Microk8s..."
+
+  sudo apt install -y nfs-kernel-server
+  sudo mkdir -p /srv/nfs
+  sudo chown nobody:nogroup /srv/nfs
+  sudo chmod 0777 /srv/nfs
+
+  sudo cp /etc/exports /etc/exports.bak
+  echo "/srv/nfs $PRIVATEIP/30(rw,sync,no_subtree_check)" | sudo tee -a /etc/exports
+  sudo exportfs -a
+
+  sudo systemctl restart nfs-kernel-server
+
+  echo "End Setup NSF for microk8s"
+  echo
+}
+
+function install_csi_driver_for_nfs() {
+  echo "Install CSI driver for NFS..."
+
+  microk8s enable helm3
+  microk8s helm3 repo add csi-driver-nfs https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
+  microk8s helm3 repo update
+  
+  microk8s helm3 install csi-driver-nfs csi-driver-nfs/csi-driver-nfs \
+    --namespace kube-system \
+    --set kubeletDir=/var/snap/microk8s/common/var/lib/kubelet
+
+  microk8s kubectl wait pod --selector app.kubernetes.io/name=csi-driver-nfs --for condition=ready --namespace kube-system
+
+  microk8s kubectl get csidrivers
+
+  echo "End Install CSI driver for NFS"
+  echo
+}
+
+function create_sc_and_pvc() {
+  echo "Create StoraceClass and PersistantVolumeClaim..."
+
+  # you should nfsvers accordindg to the outuput of ``mount | grep nfs`` and in ``vers`` param
+  cat <<EOF | kubectl apply -f -
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nfs-csi
+provisioner: nfs.csi.k8s.io
+parameters:
+  server: $PRIVATEIP
+  share: /srv/nfs
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+mountOptions:
+  - hard
+  - nfsvers=4.2
+EOF
+
+  cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: my-pvc
+spec:
+  storageClassName: nfs-csi
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 5Gi
+EOF
+
+  echo "End Create StoraceClass and PersistantVolumeClaim"
+  echo
+}
+
+# setup_storage

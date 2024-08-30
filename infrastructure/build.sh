@@ -6,15 +6,14 @@ ERROR='\e[31m'
 RESET='\e[0m'
 
 set -e
-# set -x
+
+if [ "$(lsb_release -rs)" = "20.04" ] && [ "$(lsb_release -is)" = "Ubuntu" ]; then
+    echo "--------------------- Perfect! This is Ubuntu 20.04 ✅️ ---------------------"
+else
+    echo "⚠️ WARNING: We strongly recommend using Ubuntu20.04 for this script!\nSome features may not work correctly becaues the host OS is $(lsb_release -is)$(lsb_release -rs)"
+fi
 
 install_packages() {
-  # if [ -z "$1" ];
-  # then
-  #     echo "You must provide public IP: ./build.sh PUBLIC_IP"
-  #     exit 0;
-  # fi
-
   hack_dir="$HOME/ipa/infrastructure/hack"
   zsh_script="${hack_dir}/zsh.sh"
   repos_script="${hack_dir}/repos.sh"
