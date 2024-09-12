@@ -7,12 +7,16 @@ from aiohttp import ClientSession
 from numpy.random import default_rng
 import aiohttp
 import asyncio
+import subprocess
 import grpc
 from mlserver.codecs.string import StringRequestCodec
 from mlserver.codecs.numpy import NumpyRequestCodec
 import mlserver.grpc.dataplane_pb2_grpc as dataplane
 import mlserver.grpc.converters as converters
 
+
+import logging
+logger = logging.getLogger(__name__)
 
 def decode_from_bin(
     outputs: List[bytes], shapes: List[List[int]], dtypes: List[str]
@@ -245,7 +249,7 @@ class BarAzmoonAsyncRest:
 # ============= Pure Async Grpc based load tester =============
 
 
-async def request_after_grpc(stub, metadata, wait, payload):
+async def request_after_grpc(stub: dataplane.GRPCInferenceServiceStub, metadata, wait, payload):
     if wait:
         await asyncio.sleep(wait)
         
@@ -303,9 +307,9 @@ async def request_after_grpc(stub, metadata, wait, payload):
         times["request"] = {"sending": sending_time, "arrival": arrival_time}
     except grpc.RpcError as e:
         resp["failed"] = str(e)
-        try:
+        if 'arrival_time' in locals():
             times["request"] = {"sending": sending_time, "arrival": arrival_time}
-        except UnboundLocalError:
+        else:
             times["request"] = {"sending": sending_time}
     
     return resp
@@ -334,23 +338,42 @@ class BarAzmoonAsyncGrpc:
         self.duration = benchmark_duration
         self.request_index = 0
         self.stop_flag = False
+        self.gpu_utilizations = []
+        self.stub: dataplane.GRPCInferenceServiceStub = None
 
     # def stop(self):
     #     self.stop_flag = True
 
     async def benchmark(self, request_counts):
-        async with grpc.aio.insecure_channel(self.endpoint) as ch:
+        async with grpc.aio.insecure_channel(
+                self.endpoint,
+                options=(
+                    ('grpc.keepalive_time_ms', 180000),
+                    ('grpc.keepalive_permit_without_calls', True),
+                )
+            ) as ch:
             self.stub = dataplane.GRPCInferenceServiceStub(ch)
             tasks = []
             
             # create multiple async benchmarks according to the number of 
             # workload elements
+            request_counts = list(request_counts)
+            # logger.debug("\n\n" + "-" * 25 + f"PARAMS AGAIN" + "-" * 25 + "\n")
+            # logger.debug(self.duration)
+            # logger.debug(request_counts)
+            # logger.debug("\n\n")
+            
             for i, req_count in enumerate(request_counts):
                 tasks.append(
                     asyncio.ensure_future(
                         self.submit_requests_after(
                             i * self.duration, req_count, self.duration
                         )
+                    )
+                )
+                tasks.append(
+                    asyncio.ensure_future(
+                        self.get_gpu_utilization(i*self.duration)
                     )
                 )
             await asyncio.gather(*tasks)
@@ -381,11 +404,13 @@ class BarAzmoonAsyncGrpc:
         tasks = []
         start = time.time()
         
-        print(f"Start to send {req_count} requests in {time.ctime()} at timestep {after}")
+        logger.info(f"Start to send {req_count} requests at timestep {after}")
         
         # send each request according to the arrivals distribution in the benchmark
         # duration (1 sec)
+
         data_len = len(self.payloads)
+        # logger.debug("CREATE ASYNC REQUESTS...")
         for i in range(req_count):
             data_index = self.request_index % data_len
                             
@@ -405,6 +430,7 @@ class BarAzmoonAsyncGrpc:
                 )
             )
             self.request_index += 1
+        # logger.debug("Requests created!")
             
         # if self.stop_flag:
         #     # Cancel all remaining tasks if the stop flag is set
@@ -412,8 +438,10 @@ class BarAzmoonAsyncGrpc:
         #         task.cancel()
         #     return []
 
+        # logger.debug("AWAIT FOR RESPONSES")
         # wait untill all requests in this benchmark resolve, in the order they sent
         resps = await asyncio.gather(*tasks)
+        # logger.debug("Responses Received!")
 
         # wait until the duration complete (maybe only for better logging?!)
         elapsed = time.time() - start
@@ -427,8 +455,15 @@ class BarAzmoonAsyncGrpc:
         total = len(resps)
         success = len([1 for resp in resps if "failed" not in resp.keys()])
         
-        print(f"Finished receiving {total} requests in \
-              {time.ctime()} at timestep {after}")
-        print(f"success rate: {success}/{total}")
+        logger.info(f"Finished receiving {total} requests at timestep {after}")
+        logger.info(f"success rate: {success}/{total}")
         
         return resps
+
+    async def get_gpu_utilization(self, do_after):
+        await asyncio.sleep(do_after+0.01)
+        process = subprocess.Popen(['nvidia-smi', '--query-gpu=utilization.gpu', '--format=csv,noheader,nounits'],
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        out, _ = process.communicate()
+        percent = int(out.decode('utf-8').strip())
+        self.gpu_utilizations.append(percent)

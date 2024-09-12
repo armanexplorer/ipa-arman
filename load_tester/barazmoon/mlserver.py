@@ -237,11 +237,10 @@ class MLServerAsyncGrpc:
             self.benchmark_duration,
         )
         await c.benchmark(self._workload)
-        return c.responses
-    
+        return c.responses, c.gpu_utilizations
+
     # def stop(self):
     #     self.c.stop()
-        
 
     def get_request_data(self) -> Tuple[str, str]:
         payloads = []
