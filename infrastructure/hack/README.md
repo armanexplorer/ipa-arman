@@ -73,6 +73,28 @@ watch kubectl logs pod/yolo-yolo-0-yolo-78fbc5fbdb-s45jw  --all-containers
 kubectl logs pod/yolo-yolo-0-yolo-69d5c75957-59ttj -c classifier-model-initializer
 ```
 
+### log of node (allocations)
+
+```bash
+kubectl describe node $(hostname) | tail -n 20
+
+# get the total memory label applied by the NVIDIA GPU Operator (being used by GPU Partitioner to check allocation request fits)
+kubectl describe node $(hostname) | grep "nvidia.com/gpu.memory"
+```
+
+### check the container GPU VRAM limitation
+
+With MPS, the `CUDA_MPS_PINNED_DEVICE_MEM_LIMIT` will be set in each container which requests GPU
+
+```bash
+kubectl exec -it yolo-yolo-0-yolo-596f59bbd6-fw7ng -c yolo bash
+env | grep -i CUDA
+
+# example of the output when we set one 2gb GPU for this container 
+CUDA_MPS_PINNED_DEVICE_MEM_LIMIT=0=2G
+CUDA_MPS_PIPE_DIRECTORY=/tmp/nvidia-mps
+```
+
 ### test without running model-iter
 
 ```py
@@ -384,3 +406,12 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snaps
 # Install the Snapshot Controller
 kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.0.1/deploy/kubernetes/snapshot-controller/rbac-snapshot-controller.yaml
 kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.0.1/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml
+```
+
+## AMAZON EC2 Prices
+
+[Link](https://aws.amazon.com/ec2/)
+
+## kubernetes api-resources docs
+
+[Link](https://www.pulumi.com/registry/packages/kubernetes/api-docs/)
