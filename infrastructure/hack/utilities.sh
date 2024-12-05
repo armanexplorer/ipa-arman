@@ -15,6 +15,7 @@ function install_istio() {
   kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.13/samples/addons/kiali.yaml
 
   # make sure the added pods are up
+  sleep 5
   kubectl wait --for=condition=Ready --timeout=5m pods --all -n istio-system
 
   echo "End Install Istio"
@@ -57,9 +58,6 @@ function configure_monitoring() {
   echo "Configure monitoring"
 
   # enable operator in microk8s
-  # TODO: sometimes get the following error
-  # [1] Check the monitoring pods are up...
-  # [2] error: no matching resources found
   sudo microk8s enable prometheus || true
   sudo microk8s status --wait-ready 1>/dev/null || true
 
@@ -85,6 +83,10 @@ EOF
 
   # make sure the added pods are up
   echo "Check the monitoring pods are up..."
+  # TODO: sometimes get the following error right here:
+  # error: no matching resources found -> reason: pods have not been created yet!
+  # solution: we should add manual sleep to create pods before check on them
+  sleep 5
   kubectl wait --for=condition=Ready --timeout=5m pods --all -n monitoring
   echo -e "Check Passed!\n"
 
@@ -99,6 +101,7 @@ EOF
 
   # make sure the added pods are up
   echo "Check the istio-system pods are up..."
+  sleep 5
   kubectl wait --for=condition=Ready --timeout=5m pods --all -n istio-system
   echo -e "Check Passed!\n"
 
