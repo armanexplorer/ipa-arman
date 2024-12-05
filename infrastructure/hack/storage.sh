@@ -186,4 +186,4 @@ EOF
   echo
 }
 
-# setup_storage
+setup_storage
