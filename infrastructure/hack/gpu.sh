@@ -4,15 +4,15 @@
 # set -e
 
 # Function to handle Ctrl+C (SIGINT) and Ctrl+\ (SIGQUIT)
-handle_signals() {
-  echo "----- Caught error ----"
+# handle_signals() {
+#   echo "----- Caught error ----"
   # echo "Cleaning up..."
   # Perform any necessary cleanup operations here
   # exit 0
-}
+# }
 
 # Trap SIGINT and SIGQUIT signals
-trap handle_signals SIGINT SIGQUIT
+# trap handle_signals SIGINT SIGQUIT
 
 function gpu_workload_test() {
   echo -e "Create test workload on GPU...\n"
