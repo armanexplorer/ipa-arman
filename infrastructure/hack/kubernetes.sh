@@ -31,9 +31,13 @@ function install_microk8s() {
 
   sudo snap install microk8s --classic --channel=1.23/edge
 
+  # add the user cc to the 'microk8s' group
   sudo usermod -a -G microk8s $USER
   mkdir -p $HOME/.kube
   sudo chown -f -R $USER ~/.kube
+  
+  newgrp microk8s
+  
   sudo microk8s config >$HOME/.kube/config
   
   # prevent warnings of group and world read on kube config file

@@ -86,7 +86,7 @@ EOF
   # TODO: sometimes get the following error right here:
   # error: no matching resources found -> reason: pods have not been created yet!
   # solution: we should add manual sleep to create pods before check on them
-  sleep 5
+  sleep 10
   kubectl wait --for=condition=Ready --timeout=5m pods --all -n monitoring
   echo -e "Check Passed!\n"
 

@@ -1,6 +1,7 @@
 #!/bin/bash
 
-set -e
+# NOTE: the code will crash when we use this and run mps script
+# set -e
 
 # Function to handle Ctrl+C (SIGINT) and Ctrl+\ (SIGQUIT)
 handle_signals() {
