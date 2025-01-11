@@ -89,8 +89,8 @@ EOF
   # enable nebuly nvidia plugin in this node
   kubectl label nodes $(hostname) "nos.nebuly.com/gpu-partitioning=mps" --overwrite
 
-  # ? remove any last history (maybe it should not be removed!)
-  # kubectl label node $(hostname) nvidia.com/device-plugin.config-
+  # remove nvidia last config file to prevent the "Error: specified config <label_value> does not exist" error in reinitating nvidia plugin
+  kubectl label node $(hostname) nvidia.com/device-plugin.config- || true
 
   # install nebuly device plugin
   helm install oci://ghcr.io/nebuly-ai/helm-charts/nvidia-device-plugin --wait \
