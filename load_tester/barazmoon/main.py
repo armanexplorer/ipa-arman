@@ -348,7 +348,7 @@ class BarAzmoonAsyncGrpc:
         async with grpc.aio.insecure_channel(
                 self.endpoint,
                 options=(
-                    ('grpc.keepalive_time_ms', 180000),
+                    ('grpc.keepalive_time_ms', 70000),
                     ('grpc.keepalive_permit_without_calls', True),
                 )
             ) as ch:
