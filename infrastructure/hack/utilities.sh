@@ -83,10 +83,13 @@ EOF
 
   # make sure the added pods are up
   echo "Check the monitoring pods are up..."
-  # TODO: sometimes get the following error right here:
-  # error: no matching resources found -> reason: pods have not been created yet!
-  # solution: we should add manual sleep to create pods before check on them
-  sleep 10
+  
+  # Wait for pods to be created
+  while [[ $(kubectl get pods -n monitoring --no-headers 2>/dev/null | wc -l) -eq 0 ]]; do
+    echo "Waiting for pods to be created in monitoring namespace..."
+    sleep 2
+  done
+
   kubectl wait --for=condition=Ready --timeout=5m pods --all -n monitoring
   echo -e "Check Passed!\n"
 
@@ -112,14 +115,23 @@ EOF
 function install_docker() {
   echo "Try to remove old dockers"
   sudo apt-get remove -y docker docker-engine docker.io containerd runc || true
-  echo "Install Docker"
-  curl -fsSL https://get.docker.com -o get-docker.sh
-  sudo sh get-docker.sh
+  echo "Install Docker (configure Docker apt repository and install packages)"
+  sudo apt-get update -y || true
+  sudo apt-get install -y ca-certificates curl gnupg lsb-release || true
+
+  sudo mkdir -p /etc/apt/keyrings
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+  UBUNTU_CODENAME=$(lsb_release -cs || echo focal)
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu ${UBUNTU_CODENAME} stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  sudo apt-get update -y
+
+  # Install Docker packages (omit docker-model-plugin which may not exist on older distros)
+  sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin docker-buildx-plugin docker-ce-rootless-extras || true
   sudo groupadd docker || true
   sudo usermod -aG docker $USER
   sudo systemctl enable docker.service
   sudo systemctl enable containerd.service
-  rm get-docker.sh
+  echo "Docker install step finished"
   echo "End Install Docker"
   echo
 }

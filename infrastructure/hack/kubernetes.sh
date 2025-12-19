@@ -29,7 +29,7 @@ function install_helm() {
 function install_microk8s() {
   echo "Installing MicroK8s"
 
-  sudo snap install microk8s --classic --channel=1.23/edge
+  sudo snap install microk8s --classic --channel=1.23/edge || true
 
   # add the user cc to the 'microk8s' group
   sudo usermod -a -G microk8s $USER

@@ -102,6 +102,14 @@ EOF
   # install cert manager
   kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.2/cert-manager.yaml
 
+  # wait for cert-manager deployments to become ready to avoid race with subsequent helm installs
+  echo "Waiting for cert-manager components to become ready..."
+  kubectl -n cert-manager wait --for=condition=Available --timeout=300s deployment/cert-manager || echo "cert-manager deployment not ready after timeout"
+  kubectl -n cert-manager wait --for=condition=Available --timeout=300s deployment/cert-manager-cainjector || true
+  kubectl -n cert-manager wait --for=condition=Available --timeout=300s deployment/cert-manager-webhook || true
+  # give a short grace period for webhook finalization
+  sleep 5
+
   # install nebuly nos
   helm install oci://ghcr.io/nebuly-ai/helm-charts/nos --wait \
     --version 0.1.2 \
