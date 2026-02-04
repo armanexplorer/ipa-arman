@@ -81,6 +81,13 @@ EOF
 
   kubectl apply -f ~/ipa/infrastructure/istio-monitoring.yaml
 
+  # enable scraping DCGM exporter (GPU metrics) if ServiceMonitor CRD exists
+  if kubectl get crd servicemonitors.monitoring.coreos.com >/dev/null 2>&1; then
+    kubectl apply -f ~/ipa/infrastructure/hack/monitoring/nvidia-dcgm-exporter-servicemonitor.yaml
+  else
+    echo "ServiceMonitor CRD not found; skipping DCGM ServiceMonitor"
+  fi
+
   # make sure the added pods are up
   echo "Check the monitoring pods are up..."
   

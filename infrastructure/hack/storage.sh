@@ -107,6 +107,12 @@ stringData:
   RCLONE_CONFIG_S3_SECRET_ACCESS_KEY: minioadmin
   RCLONE_CONFIG_S3_ENDPOINT: http://$PUBLIC_IP:31900
 EOF
+  
+  # Set bucket policies for model access
+  # echo "Setting bucket policies..."
+  # mc anonymous set download minio/yolo 2>/dev/null || echo "yolo bucket not found (will be created later)"
+  # mc anonymous set download minio/torchhub 2>/dev/null || echo "torchhub bucket not found (will be created later)"
+  
   rm mc
   echo "End Setup storage"
   echo

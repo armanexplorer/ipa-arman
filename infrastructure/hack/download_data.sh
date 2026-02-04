@@ -11,8 +11,9 @@ function download_data(){
 
     # create buckets
     # mc mb minio/huggingface
-    mc mb minio/torchhub
+    mc mb --ignore-existing minio/torchhub
 
+    rm -rf ~/temp-model-dir
     mkdir ~/temp-model-dir
 
     # download ml models from google storage
